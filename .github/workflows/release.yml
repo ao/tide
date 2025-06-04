@@ -157,14 +157,19 @@ jobs:
             dist/${{ matrix.binary_name }}.sha256
           if-no-files-found: error
 
-  release:
-    name: Create Release
+  auto-release:
+    name: Auto Create Release
     needs: build
-    if: startsWith(github.ref, 'refs/tags/')
+    if: github.ref == 'refs/heads/main'
     runs-on: ubuntu-latest
     permissions:
       contents: write
     steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
       - name: Download all artifacts
         uses: actions/download-artifact@v4
         with:
@@ -173,13 +178,53 @@ jobs:
       - name: Display structure of downloaded files
         run: ls -R artifacts/
 
+      - name: Get version from Cargo.toml
+        id: get_version
+        run: |
+          VERSION=$(grep '^version = ' Cargo.toml | head -1 | sed 's/version = "\(.*\)"/\1/')
+          echo "version=v$VERSION" >> $GITHUB_OUTPUT
+          echo "Version: v$VERSION"
+
+      - name: Check if tag exists
+        id: check_tag
+        run: |
+          if git rev-parse "refs/tags/${{ steps.get_version.outputs.version }}" >/dev/null 2>&1; then
+            echo "exists=true" >> $GITHUB_OUTPUT
+            echo "Tag ${{ steps.get_version.outputs.version }} already exists"
+          else
+            echo "exists=false" >> $GITHUB_OUTPUT
+            echo "Tag ${{ steps.get_version.outputs.version }} does not exist"
+          fi
+
+      - name: Create and push tag
+        if: steps.check_tag.outputs.exists == 'false'
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git tag ${{ steps.get_version.outputs.version }}
+          git push origin ${{ steps.get_version.outputs.version }}
+
       - name: Create Release
-        id: create_release
         uses: softprops/action-gh-release@v1
         with:
+          tag_name: ${{ steps.get_version.outputs.version }}
+          name: Release ${{ steps.get_version.outputs.version }}
           files: artifacts/**/*
           draft: false
           prerelease: false
           generate_release_notes: true
+          body: |
+            🚀 **Automated Release**
+            
+            This release was automatically created after all tests passed and builds succeeded.
+            
+            ## Download Pre-built Binaries
+            
+            - **Linux (x86_64)**: `tide-linux-x86_64`
+            - **macOS (Intel)**: `tide-macos-x86_64`
+            - **macOS (Apple Silicon)**: `tide-macos-arm64`
+            - **Windows**: `tide-windows-x86_64.exe`
+            
+            See the [README](https://github.com/ao/tide#quick-installation) for installation instructions.
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
