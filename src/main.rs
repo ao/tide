@@ -5,11 +5,11 @@ use clap::Parser;
 use colored::*;
 use std::sync::Arc;
 use std::time::{Duration, Instant};
+use thiserror::Error;
 use tokio::signal;
 use tokio::sync::Mutex;
 use tokio::time::interval;
 use url::Url;
-use thiserror::Error;
 
 use banner::banner;
 use requests::{RequestMetrics, make_request_with_retry};
@@ -55,16 +55,17 @@ struct Config {
 
 fn load_config() -> Result<Config, Box<dyn std::error::Error>> {
     // Check for custom config path from environment variable
-    let config_path_str = std::env::var("TIDE_CONFIG").unwrap_or_else(|_| "config.toml".to_string());
+    let config_path_str =
+        std::env::var("TIDE_CONFIG").unwrap_or_else(|_| "config.toml".to_string());
     let config_path = Path::new(&config_path_str);
-    
+
     if !config_path.exists() {
         return Err(format!("Config file not found: {}", config_path_str).into());
     }
-    
+
     let config_content = fs::read_to_string(config_path)?;
     let config: Config = toml::from_str(&config_content)?;
-    
+
     Ok(config)
 }
 
@@ -243,7 +244,12 @@ async fn main() -> Result<(), AppError> {
     let config = match load_config() {
         Ok(c) => c,
         Err(e) => {
-            println!("{}Warning: {}, using command-line arguments{}", "".yellow(), e, "".clear());
+            println!(
+                "{}Warning: {}, using command-line arguments{}",
+                "".yellow(),
+                e,
+                "".clear()
+            );
             // Convert args to config
             Config {
                 url: args.url.clone(),
@@ -275,7 +281,7 @@ async fn main() -> Result<(), AppError> {
     // Set up graceful shutdown
     let shutdown_signal = async {
         match signal::ctrl_c().await {
-            Ok(_) => {},
+            Ok(_) => {}
             Err(e) => eprintln!("{}Shutdown signal error: {}{}", "".red(), e, "".clear()),
         }
     };
@@ -378,7 +384,7 @@ mod tests {
             timeout: 5,
             retries: 2,
         };
-        
+
         let result = validate_args(&args);
         assert!(result.is_ok());
     }
@@ -392,7 +398,7 @@ mod tests {
             timeout: 5,
             retries: 2,
         };
-        
+
         let result = validate_args(&args);
         assert!(result.is_err());
         match result {
@@ -412,7 +418,7 @@ mod tests {
             timeout: 5,
             retries: 2,
         };
-        
+
         let result = validate_args(&args);
         assert!(result.is_err());
         match result {
@@ -432,7 +438,7 @@ mod tests {
             timeout: 5,
             retries: 2,
         };
-        
+
         let result = validate_args(&args);
         assert!(result.is_err());
         match result {
@@ -452,7 +458,7 @@ mod tests {
             timeout: 5,
             retries: 2,
         };
-        
+
         let result = validate_args(&args);
         assert!(result.is_err());
         match result {
@@ -472,7 +478,7 @@ mod tests {
             timeout: 0,
             retries: 2,
         };
-        
+
         let result = validate_args(&args);
         assert!(result.is_err());
         match result {
@@ -494,7 +500,7 @@ mod tests {
         // Create a temporary directory
         let dir = tempdir().unwrap();
         let config_path = dir.path().join("config.toml");
-        
+
         // Create a config file
         let mut file = File::create(&config_path).unwrap();
         writeln!(file, "url = \"https://example.com\"").unwrap();
@@ -502,11 +508,11 @@ mod tests {
         writeln!(file, "duration = 10").unwrap();
         writeln!(file, "timeout = 5").unwrap();
         writeln!(file, "retries = 2").unwrap();
-        
+
         // For this example, we'll just verify the config format is correct
         let config_content = std::fs::read_to_string(&config_path).unwrap();
         let config: Config = toml::from_str(&config_content).unwrap();
-        
+
         assert_eq!(config.url, "https://example.com");
         assert_eq!(config.concurrency, 5);
         assert_eq!(config.duration, 10);

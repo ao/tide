@@ -111,16 +111,16 @@ mod tests {
     #[test]
     fn test_request_metrics_new() {
         let metrics = RequestMetrics::new();
-        
+
         // We can't use async/await in a regular #[test], so we'll just check the initial values
         assert!(Arc::strong_count(&metrics.successful_requests) == 1);
         assert!(Arc::strong_count(&metrics.failed_requests) == 1);
         assert!(Arc::strong_count(&metrics.request_times) == 1);
     }
-    
+
     // For the HTTP request tests, we'll use a simpler approach without mockito
     // since we're having runtime issues
-    
+
     // Test for invalid URL - this doesn't need a mock server
     #[tokio::test(flavor = "multi_thread")]
     async fn test_make_request_with_retry_invalid_url() {
@@ -129,9 +129,9 @@ mod tests {
         let metrics = RequestMetrics::new();
         let timeout = Duration::from_secs(1);
         let retries = 0; // No retries to make the test faster
-        
+
         let result = make_request_with_retry(&client, url, timeout, retries, &metrics).await;
-        
+
         assert!(result.is_err());
         assert_eq!(*metrics.failed_requests.lock().await, 1);
     }

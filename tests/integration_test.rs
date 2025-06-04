@@ -9,9 +9,9 @@ fn test_app_runs() {
         .arg("--url")
         .arg("https://example.com")
         .arg("--duration")
-        .arg("1")  // Short duration for testing
+        .arg("1") // Short duration for testing
         .assert();
-    
+
     result.success();
 }
 
@@ -22,7 +22,7 @@ fn test_app_with_invalid_url() {
         .arg("--url")
         .arg("invalid-url")
         .assert();
-    
+
     result.failure();
 }
 
@@ -38,7 +38,7 @@ fn test_app_with_retries() {
         .arg("--retries")
         .arg("5")
         .assert();
-    
+
     result.success();
 }
 
@@ -54,6 +54,6 @@ fn test_app_with_timeout() {
         .arg("--timeout")
         .arg("2")
         .assert();
-    
+
     result.success();
 }
