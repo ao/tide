@@ -71,32 +71,32 @@ fn load_config() -> Result<Config, Box<dyn std::error::Error>> {
 #[derive(Debug, Error)]
 enum AppError {
     #[error("Argument error: {0}")]
-    ArgumentError(String),
+    Argument(String),
     #[error("Request error: {0}")]
-    RequestError(#[from] reqwest::Error),
+    Request(#[from] reqwest::Error),
     #[error("Signal error: {0}")]
-    SignalError(#[from] tokio::io::Error),
+    Signal(#[from] tokio::io::Error),
 }
 
 fn validate_args(args: &Args) -> Result<(), AppError> {
     if args.url.trim().is_empty() {
-        return Err(AppError::ArgumentError("Target URL is required".to_string()));
+        return Err(AppError::Argument("Target URL is required".to_string()));
     }
 
     if Url::parse(&args.url).is_err() {
-        return Err(AppError::ArgumentError("Invalid target URL".to_string()));
+        return Err(AppError::Argument("Invalid target URL".to_string()));
     }
 
     if args.concurrency == 0 {
-        return Err(AppError::ArgumentError("Concurrency must be > 0".to_string()));
+        return Err(AppError::Argument("Concurrency must be > 0".to_string()));
     }
 
     if args.duration == 0 {
-        return Err(AppError::ArgumentError("Duration must be > 0".to_string()));
+        return Err(AppError::Argument("Duration must be > 0".to_string()));
     }
 
     if args.timeout == 0 {
-        return Err(AppError::ArgumentError("Timeout must be > 0".to_string()));
+        return Err(AppError::Argument("Timeout must be > 0".to_string()));
     }
 
     Ok(())
@@ -258,7 +258,7 @@ async fn main() -> Result<(), AppError> {
     let client = reqwest::Client::builder()
         .timeout(Duration::from_secs(config.timeout))
         .build()
-        .map_err(AppError::RequestError)?;
+        .map_err(AppError::Request)?;
 
     let metrics = RequestMetrics::new();
     let total_requests = Arc::new(Mutex::new(0u32));
@@ -396,10 +396,10 @@ mod tests {
         let result = validate_args(&args);
         assert!(result.is_err());
         match result {
-            Err(AppError::ArgumentError(msg)) => {
+            Err(AppError::Argument(msg)) => {
                 assert_eq!(msg, "Target URL is required");
             }
-            _ => panic!("Expected ArgumentError"),
+            _ => panic!("Expected Argument"),
         }
     }
 
@@ -416,10 +416,10 @@ mod tests {
         let result = validate_args(&args);
         assert!(result.is_err());
         match result {
-            Err(AppError::ArgumentError(msg)) => {
+            Err(AppError::Argument(msg)) => {
                 assert_eq!(msg, "Invalid target URL");
             }
-            _ => panic!("Expected ArgumentError"),
+            _ => panic!("Expected Argument"),
         }
     }
 
@@ -436,10 +436,10 @@ mod tests {
         let result = validate_args(&args);
         assert!(result.is_err());
         match result {
-            Err(AppError::ArgumentError(msg)) => {
+            Err(AppError::Argument(msg)) => {
                 assert_eq!(msg, "Concurrency must be > 0");
             }
-            _ => panic!("Expected ArgumentError"),
+            _ => panic!("Expected Argument"),
         }
     }
 
@@ -456,10 +456,10 @@ mod tests {
         let result = validate_args(&args);
         assert!(result.is_err());
         match result {
-            Err(AppError::ArgumentError(msg)) => {
+            Err(AppError::Argument(msg)) => {
                 assert_eq!(msg, "Duration must be > 0");
             }
-            _ => panic!("Expected ArgumentError"),
+            _ => panic!("Expected Argument"),
         }
     }
 
@@ -476,10 +476,10 @@ mod tests {
         let result = validate_args(&args);
         assert!(result.is_err());
         match result {
-            Err(AppError::ArgumentError(msg)) => {
+            Err(AppError::Argument(msg)) => {
                 assert_eq!(msg, "Timeout must be > 0");
             }
-            _ => panic!("Expected ArgumentError"),
+            _ => panic!("Expected Argument"),
         }
     }
 
