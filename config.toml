@@ -1,0 +1,5 @@
+url = "https://example.com"
+concurrency = 5
+duration = 10
+timeout = 10
+retries = 2

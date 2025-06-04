@@ -1,0 +1,24 @@
+[package]
+name = "tide"
+version = "0.1.0"
+edition = "2024"
+
+[dependencies]
+clap = { version = "4.0", features = ["derive"] }
+tokio = { version = "1.0", features = ["full"] }
+reqwest = { version = "0.11", features = ["json"] }
+url = "2.0"
+colored = "2.0"
+serde = { version = "1.0", features = ["derive"] }
+thiserror = "1.0"
+toml = "0.8"
+
+[dev-dependencies]
+assert_cmd = "2.0"
+mockito = "1.0"
+tokio-test = "0.4"
+tempfile = "3.3"
+
+[[test]]
+name = "integration_test"
+path = "tests/integration_test.rs"

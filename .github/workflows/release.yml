@@ -1,0 +1,183 @@
+name: Build and Release
+
+on:
+  push:
+    branches:
+      - main
+    tags:
+      - 'v*'
+
+jobs:
+  test:
+    name: Run Tests and Checks
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+
+      - name: Install Rust toolchain
+        uses: actions-rs/toolchain@v1
+        with:
+          profile: minimal
+          toolchain: stable
+          override: true
+          components: rustfmt, clippy
+
+      - name: Cache dependencies
+        uses: actions/cache@v3
+        with:
+          path: |
+            ~/.cargo/registry
+            ~/.cargo/git
+            target
+          key: ${{ runner.os }}-cargo-test-${{ hashFiles('**/Cargo.lock') }}
+          restore-keys: |
+            ${{ runner.os }}-cargo-test-
+
+      - name: Run tests
+        run: cargo test
+
+      - name: Run clippy
+        run: cargo clippy -- -D warnings
+
+      - name: Check formatting
+        run: cargo fmt --check
+
+  build:
+    needs: test
+    name: Build ${{ matrix.target }}
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - target: x86_64-unknown-linux-gnu
+            os: ubuntu-latest
+            binary_name: tide-linux-x86_64
+            use_cross: true
+          - target: x86_64-apple-darwin
+            os: macos-latest
+            binary_name: tide-macos-x86_64
+            use_cross: false
+          - target: aarch64-apple-darwin
+            os: macos-latest
+            binary_name: tide-macos-arm64
+            use_cross: false
+          - target: x86_64-pc-windows-msvc
+            os: windows-latest
+            binary_name: tide-windows-x86_64.exe
+            use_cross: false
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+
+      - name: Install Rust toolchain
+        uses: actions-rs/toolchain@v1
+        with:
+          profile: minimal
+          toolchain: stable
+          target: ${{ matrix.target }}
+          override: true
+
+      - name: Install cross (if needed)
+        if: matrix.use_cross
+        run: cargo install cross
+
+      - name: Cache dependencies
+        uses: actions/cache@v3
+        with:
+          path: |
+            ~/.cargo/registry
+            ~/.cargo/git
+            target
+          key: ${{ runner.os }}-cargo-${{ matrix.target }}-${{ hashFiles('**/Cargo.lock') }}
+          restore-keys: |
+            ${{ runner.os }}-cargo-${{ matrix.target }}-
+
+      - name: Build binary
+        shell: bash
+        run: |
+          if [ "${{ matrix.use_cross }}" == "true" ]; then
+            cross build --release --target ${{ matrix.target }}
+          else
+            cargo build --release --target ${{ matrix.target }}
+          fi
+
+      - name: Prepare binary
+        shell: bash
+        run: |
+          # Create dist directory
+          mkdir -p dist
+          
+          # Copy binary to dist with proper name
+          if [ "${{ runner.os }}" == "Windows" ]; then
+            cp target/${{ matrix.target }}/release/tide.exe dist/${{ matrix.binary_name }}
+          else
+            cp target/${{ matrix.target }}/release/tide dist/${{ matrix.binary_name }}
+          fi
+          
+          # Strip binary to reduce size (except Windows)
+          if [ "${{ runner.os }}" != "Windows" ]; then
+            strip dist/${{ matrix.binary_name }} || true
+          fi
+          
+          # Create checksum
+          cd dist
+          if [ "${{ runner.os }}" == "Windows" ]; then
+            certutil -hashfile ${{ matrix.binary_name }} SHA256 > ${{ matrix.binary_name }}.sha256
+            # Clean up the certutil output to just show the hash
+            powershell "(Get-Content ${{ matrix.binary_name }}.sha256 | Select-Object -Skip 1 | Select-Object -First 1).Trim() > ${{ matrix.binary_name }}.sha256.tmp"
+            powershell "Move-Item -Force ${{ matrix.binary_name }}.sha256.tmp ${{ matrix.binary_name }}.sha256"
+          else
+            shasum -a 256 ${{ matrix.binary_name }} > ${{ matrix.binary_name }}.sha256
+          fi
+
+      - name: Run smoke test
+        shell: bash
+        run: |
+          # Make binary executable (not needed for Windows)
+          if [ "${{ runner.os }}" != "Windows" ]; then
+            chmod +x dist/${{ matrix.binary_name }}
+          fi
+          
+          # Run with --help to verify it works
+          if [ "${{ runner.os }}" == "Windows" ]; then
+            ./dist/${{ matrix.binary_name }} --help || exit 1
+          else
+            ./dist/${{ matrix.binary_name }} --help || exit 1
+          fi
+
+      - name: Upload artifacts
+        uses: actions/upload-artifact@v3
+        with:
+          name: ${{ matrix.binary_name }}
+          path: |
+            dist/${{ matrix.binary_name }}
+            dist/${{ matrix.binary_name }}.sha256
+          if-no-files-found: error
+
+  release:
+    name: Create Release
+    needs: build
+    if: startsWith(github.ref, 'refs/tags/')
+    runs-on: ubuntu-latest
+    steps:
+      - name: Download all artifacts
+        uses: actions/download-artifact@v3
+        with:
+          path: artifacts
+
+      - name: Display structure of downloaded files
+        run: ls -R artifacts/
+
+      - name: Create Release
+        id: create_release
+        uses: softprops/action-gh-release@v1
+        with:
+          files: artifacts/**/*
+          draft: false
+          prerelease: false
+          generate_release_notes: true
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
