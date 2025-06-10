@@ -12,7 +12,7 @@ class Tide < Formula
   end
 
   test do
-    assert_match "tide 0.3.0")
+    assert_match "tide 0.3.0", shell_output("#{bin}/tide --version")
   end
 
   def caveats
