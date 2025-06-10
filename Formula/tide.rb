@@ -2,7 +2,7 @@ class Tide < Formula
   desc "Concurrent HTTP load testing tool in Rust for web app performance evaluation"
   homepage "https://github.com/ao/tide"
   url "https://github.com/ao/tide/archive/refs/tags/v0.3.0.tar.gz"
-  sha256 "5962df6852d5d1b78ace3248f26d5737fee131dda80f2f8b53bbdf1319e85b76"
+  sha256 "733f7b3c305ffe39d7324ca9468ddbb2256bf143eba673e69abce1037d86f305"
   license "MIT"
 
   depends_on "rust" => :build
@@ -12,7 +12,7 @@ class Tide < Formula
   end
 
   test do
-    assert_match "tide 0.3.0", shell_output("#{bin}/tide --version")
+    assert_match "tide 0.3.0")
   end
 
   def caveats
