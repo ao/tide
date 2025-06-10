@@ -321,7 +321,7 @@ jobs:
           content.gsub!(/sha256 ".*"/, "sha256 \"#{source_sha}\"")
           
           # Update version in test
-          content.gsub!(/assert_match "tide .*"/, "assert_match \"tide #{version}\"")
+          content.gsub!(/assert_match "tide [^"]*"/, "assert_match \"tide #{version}\"")
           
           File.write(formula_path, content)
           EOL
