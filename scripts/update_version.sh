@@ -1,0 +1,46 @@
+#!/bin/bash
+
+# Script to update version numbers across all project files
+# Usage: ./scripts/update_version.sh 0.2.0
+
+set -e
+
+if [ $# -ne 1 ]; then
+  echo "Usage: $0 <new_version>"
+  echo "Example: $0 0.2.0"
+  exit 1
+fi
+
+NEW_VERSION=$1
+echo "Updating version to $NEW_VERSION"
+
+# Check if the version format is valid (x.y.z)
+if ! [[ $NEW_VERSION =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+  echo "Error: Version must be in format x.y.z (e.g., 0.2.0)"
+  exit 1
+fi
+
+# Update version in Cargo.toml
+echo "Updating Cargo.toml..."
+sed -i.bak "s/^version = \".*\"/version = \"$NEW_VERSION\"/" Cargo.toml
+rm Cargo.toml.bak
+
+# Update version in Formula/tide.rb
+echo "Updating Formula/tide.rb..."
+# Update URL
+sed -i.bak "s|url \".*\/v.*\.tar\.gz\"|url \"https://github.com/ao/tide/archive/refs/tags/v$NEW_VERSION.tar.gz\"|" Formula/tide.rb
+# Update test assertion
+sed -i.bak "s/assert_match \"tide .*\", shell_output/assert_match \"tide $NEW_VERSION\", shell_output/" Formula/tide.rb
+rm Formula/tide.rb.bak
+
+echo "Version updated to $NEW_VERSION in all files"
+echo ""
+echo "Next steps:"
+echo "1. Commit the changes: git commit -am \"Bump version to $NEW_VERSION\""
+echo "2. Create a tag: git tag -a v$NEW_VERSION -m \"Release v$NEW_VERSION\""
+echo "3. Push changes: git push origin main && git push origin v$NEW_VERSION"
+echo ""
+echo "The GitHub Actions workflow will automatically:"
+echo "- Build binaries for all platforms"
+echo "- Create a GitHub release"
+echo "- Update formula file with correct checksum"

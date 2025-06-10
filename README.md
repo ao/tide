@@ -1,6 +1,6 @@
 # Tide - HTTP Load Testing Tool
 
-[![License](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 
 Tide is a powerful and concurrent HTTP load testing tool written in Rust. It's designed to help you quickly and easily assess the performance and scalability of your web applications and APIs. Inspired by the original GoFlood project, Tide provides detailed performance statistics, configurable parameters, and a graceful shutdown mechanism.
 
@@ -57,6 +57,13 @@ Invoke-WebRequest -Uri https://github.com/ao/tide/releases/latest/download/tide-
 
 # Verify it works
 .\tide.exe --version
+```
+
+### Homebrew (macOS)
+
+```bash
+brew tap ao/tide https://github.com/ao/tide
+brew install tide
 ```
 
 ### How to Determine Your System Architecture
@@ -163,30 +170,21 @@ cargo run -- --url https://example.com -n 10 -t 30 --timeout 5 --retries 3
 
 ## Example Output
 
-```
-*** Summary Report ***
-+---------------------------+------------------------------------------+
-| Target URL                | https://httpbin.org/get                  |
-+---------------------------+------------------------------------------+
-| Concurrency               | 3                                        |
-+---------------------------+------------------------------------------+
-| Duration                  | 5.426s                                   |
-+---------------------------+------------------------------------------+
-| Total Requests            | 15                                       |
-+---------------------------+------------------------------------------+
-| Successful Requests       | 15                                       |
-+---------------------------+------------------------------------------+
-| Failed Requests           | 0                                        |
-+---------------------------+------------------------------------------+
-| Min Request Time          | 284.264ms                                |
-+---------------------------+------------------------------------------+
-| Median Request Time       | 649.119ms                                |
-+---------------------------+------------------------------------------+
-| Max Request Time          | 1904.174ms                               |
-+---------------------------+------------------------------------------+
-| Avg Request Time          | 824.748ms                                |
-+---------------------------+------------------------------------------+
-```
+
+### Summary Report
+
+| Metric | Value |
+| ------ | ----- |
+| Target URL | https://httpbin.org/get |
+| Concurrency | 3 |
+| Duration | 5.426s |
+| Total Requests | 15 |
+| Successful Requests | 15 |
+| Failed Requests | 0 |
+| Min Request Time | 284.264ms |
+| Median Request Time | 649.119ms |
+| Max Request Time | 1904.174ms |
+| Avg Request Time | 824.748ms |
 
 ## Architecture
 
@@ -218,4 +216,47 @@ We welcome contributions to Tide! If you'd like to contribute, please follow the
 
 ## License
 
-This project is licensed under the MIT License. See the [LICENSE](LICENSE) file for details.
+MIT
+
+## Development
+
+### Version Management
+
+This project includes a script to easily update the version across all files:
+
+```bash
+# Update to version 0.5.0
+./scripts/update_version.sh 0.5.0
+```
+
+This script will:
+1. Update the version in `Cargo.toml`
+2. Update the version in `Formula/ktmm.rb` (URL and test assertion)
+
+After running the script, follow the displayed instructions to commit, tag, and push the changes.
+
+### Automatic Formula Updates
+
+This project is configured to automatically update the Homebrew formula whenever a new release is created. The GitHub Actions workflow:
+
+1. Builds binaries for all supported platforms
+2. Creates a GitHub release with the binaries
+3. Calculates SHA256 checksum for the source tarball
+4. Updates the formula file with the new checksum
+5. Commits and pushes the changes back to the main branch
+
+This eliminates the need for manual updates to the formula when releasing new versions. The complete release process is:
+
+```bash
+# 1. Update the version
+./scripts/update_version.sh 0.5.0
+
+# 2. Commit the changes
+git commit -am "Bump version to 0.5.0"
+
+# 3. Create and push a tag
+git tag -a v0.5.0 -m "Release v0.5.0"
+git push origin main && git push origin v0.5.0
+```
+
+The GitHub Actions workflow will handle the rest automatically.

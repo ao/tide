@@ -228,3 +228,114 @@ jobs:
             See the [README](https://github.com/ao/tide#quick-installation) for installation instructions.
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+  tag-release:
+    name: Create Tagged Release
+    needs: build
+    if: startsWith(github.ref, 'refs/tags/')
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Get version from tag
+        id: get_version
+        run: echo "VERSION=${GITHUB_REF#refs/tags/v}" >> $GITHUB_ENV
+
+      - name: Download all artifacts
+        uses: actions/download-artifact@v4
+        with:
+          path: artifacts
+
+      - name: Display structure of downloaded files
+        run: ls -R artifacts/
+
+      - name: Create Release
+        uses: softprops/action-gh-release@v1
+        with:
+          tag_name: ${{ github.ref }}
+          name: Release v${{ env.VERSION }}
+          files: artifacts/**/*
+          draft: false
+          prerelease: false
+          generate_release_notes: true
+          body: |
+            🚀 **Release v${{ env.VERSION }}**
+            
+            ## Download Pre-built Binaries
+            
+            - **Linux (x86_64)**: `tide-linux-x86_64`
+            - **macOS (Intel)**: `tide-macos-x86_64`
+            - **macOS (Apple Silicon)**: `tide-macos-arm64`
+            - **Windows**: `tide-windows-x86_64.exe`
+            
+            See the [README](https://github.com/ao/tide#quick-installation) for installation instructions.
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+  update-formula:
+    name: Update Homebrew Formula
+    needs: tag-release
+    if: startsWith(github.ref, 'refs/tags/')
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          ref: main  # Explicitly checkout main branch
+          fetch-depth: 0
+          token: ${{ secrets.GITHUB_TOKEN }}
+      
+      - name: Get version from tag
+        id: get_version
+        run: echo "VERSION=${GITHUB_REF#refs/tags/v}" >> $GITHUB_ENV
+      
+      - name: Download source tarball and calculate SHA256
+        run: |
+          # Download source tarball and calculate its SHA256
+          curl -L -o source.tar.gz https://github.com/ao/tide/archive/refs/tags/v${VERSION}.tar.gz
+          echo "SOURCE_SHA=$(sha256sum source.tar.gz | awk '{print $1}')" >> $GITHUB_ENV
+      
+      - name: Update Formula
+        run: |
+          # Create a Ruby script to update the formula
+          cat > update_formula.rb << 'EOL'
+          #!/usr/bin/env ruby
+          
+          version = ENV['VERSION']
+          source_sha = ENV['SOURCE_SHA']
+          
+          formula_path = 'Formula/tide.rb'
+          content = File.read(formula_path)
+          
+          # Update version in URL
+          content.gsub!(/url ".*\/v.*\.tar\.gz"/, "url \"https://github.com/ao/tide/archive/refs/tags/v#{version}.tar.gz\"")
+          
+          # Update SHA256 checksum
+          content.gsub!(/sha256 ".*"/, "sha256 \"#{source_sha}\"")
+          
+          # Update version in test
+          content.gsub!(/assert_match "tide .*"/, "assert_match \"tide #{version}\"")
+          
+          File.write(formula_path, content)
+          EOL
+          
+          chmod +x update_formula.rb
+          ruby update_formula.rb
+      
+      - name: Configure Git
+        run: |
+          git config --global user.name "GitHub Actions"
+          git config --global user.email "actions@github.com"
+      
+      - name: Commit and push changes
+        run: |
+          git add Formula/tide.rb
+          git commit -m "Update formula for v${{ env.VERSION }}"
+          git push origin main

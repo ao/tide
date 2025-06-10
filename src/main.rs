@@ -17,7 +17,7 @@ use requests::{RequestMetrics, make_request_with_retry};
 #[derive(Parser)]
 #[command(name = "tide")]
 #[command(about = "A concurrent HTTP load testing tool")]
-#[command(version = "1.0")]
+#[command(version = env!("CARGO_PKG_VERSION"))]
 struct Args {
     /// Target URL (required)
     #[arg(long, value_name = "URL")]
