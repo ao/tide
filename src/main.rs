@@ -12,7 +12,7 @@ use tokio::time::interval;
 use url::Url;
 
 use banner::banner;
-use requests::{RequestMetrics, make_request_with_retry};
+use requests::{make_request_with_retry, RequestMetrics};
 
 #[derive(Parser)]
 #[command(name = "tide")]
