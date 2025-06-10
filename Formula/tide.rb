@@ -1,8 +1,8 @@
 class Tide < Formula
   desc "Concurrent HTTP load testing tool in Rust for web app performance evaluation"
   homepage "https://github.com/ao/tide"
-  url "https://github.com/ao/tide/archive/refs/tags/v0.3.0.tar.gz"
-  sha256 "733f7b3c305ffe39d7324ca9468ddbb2256bf143eba673e69abce1037d86f305"
+  url "https://github.com/ao/tide/archive/refs/tags/v0.4.0.tar.gz"
+  sha256 "c9d5a8befd5b0050a8ab13bb47a8f9508ff0dfd403b132dc49548bce8d307dc9"
   license "MIT"
 
   depends_on "rust" => :build
